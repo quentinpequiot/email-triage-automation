@@ -1,0 +1,290 @@
+{
+  "name": "NovaRetail - Tri emails",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -16,
+        80
+      ],
+      "id": "41cd2110-c917-4429-b9f8-53ff24186770",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "norOzKjVNETnzqSZ",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Tu es l'assistant email de NovaRetail (vente de mobilier et décoration). Analyse cet email et réponds UNIQUEMENT avec un objet JSON valide, sans texte avant ni après, format exact : {\"categorie\": \"SAV\" ou \"SUIVI\" ou \"B2B\" ou \"AUTRE\", \"brouillon\": \"texte de la réponse ou vide si AUTRE\"} Règles de catégorisation : SAV = produit défectueux, cassé, réclamation, retour SUIVI = question sur une commande pas encore livrée, délai B2B = devis professionnel, commande en volume AUTRE = rien de tout ça (spam, hors sujet) Si la catégorie n'est PAS AUTRE, rédige un brouillon professionnel, empathique, signe 'L'équipe NovaRetail'. Ne promets jamais de délai précis ni de remboursement, dis que l'équipe reviendra vers le client rapidement. Si AUTRE, laisse brouillon vide. Email : Sujet : {{ $json.Subject }} Message : {{ $json.snippet }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.7
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        192,
+        80
+      ],
+      "id": "db10bc9d-6eb7-45b4-874f-5fe379693a5b",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "X9oizhPu67GdOePd",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.content.parts[0].text; const cleaned = raw.replace(/```json\\n?/g, '').replace(/```/g, '').trim(); const parsed = JSON.parse(cleaned); return [{ json: parsed }]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        80
+      ],
+      "id": "93cde4e1-ba4a-41d0-8163-ee66abc36e6c",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.categorie }}",
+                    "rightValue": "SAV",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "965c86d7-52f0-4bc3-99d1-78801c866347"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "ceba2a45-f885-4b30-b195-09d3f1f2dbc7",
+                    "leftValue": "={{ $json.categorie }}",
+                    "rightValue": "SUIVI",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "b10d9ef6-4c10-42c8-b93e-eac3fa0d878d",
+                    "leftValue": "={{ $json.categorie }}",
+                    "rightValue": "B2B",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3a86a76c-76af-4912-b9db-614d13610028",
+                    "leftValue": "={{ $json.categorie }}",
+                    "rightValue": "AUTRE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        688,
+        48
+      ],
+      "id": "70007b72-0cd8-4432-807e-65b7d4d8d148",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "draft",
+        "subject": "=Re: {{ $('Gmail Trigger').item.json.Subject }}",
+        "message": "={{ $json.brouillon }}",
+        "options": {
+          "sendTo": "={{ $('Gmail Trigger').item.json.From }}"
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        928,
+        64
+      ],
+      "id": "c9ceeb30-e8c5-4e7f-9adf-a13e009bc33f",
+      "name": "Create a draft",
+      "webhookId": "be934baa-da70-4684-9c41-594a8c79ed6b",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "norOzKjVNETnzqSZ",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create a draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "5655eafa-123b-44d4-b15c-a6928aed803b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "880d086c1265fad47d3daad1e78043c256aab92c9a7059278bab93fbc72e8880"
+  },
+  "nodeGroups": [],
+  "id": "7J8UWCmUq3mqCUHm",
+  "tags": []
+}
